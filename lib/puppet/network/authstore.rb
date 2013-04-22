@@ -117,7 +117,7 @@ module Puppet
 
       # The type of declaration: either :allow or :deny
       attr_reader :type
-      VALID_TYPES = [ :allow, :deny, :allow_ip, :deny_ip ]
+      VALID_TYPES = [ :allow, :deny, :allow_ip, :deny_ip, :allow_exec, :deny_exec ]
 
       attr_accessor :name
 
@@ -160,6 +160,13 @@ module Puppet
       def match?(name, ip)
         if ip?
           pattern.include?(IPAddr.new(ip))
+        elsif File.executable? self.pattern
+          begin
+            system "#{@pattern} #{name}"
+            $?.exitstatus == 0
+          rescue Exception => e
+            raise PuppetError::ExecError, "Autosign hook error trying to execute #{@pattern} #{name}: #{e}"
+          end
         else
           matchname?(name)
         end
@@ -273,6 +280,8 @@ module Puppet
           [:opaque,:exact,nil,[value]]
         when /^\/.*\/$/                                           # a regular expression
           [:regex,:inexact,nil,value]
+        when /^\/.+(?:[^\/])/                                     # path to executable
+          [:exact, nil, value]
         else
           raise AuthStoreError, "Invalid pattern #{value}"
         end
