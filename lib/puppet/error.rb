@@ -46,4 +46,8 @@ module Puppet # :nodoc:
   # prints a stack trace when in debug mode.
   class DevError < Puppet::Error
   end
+  
+  class ExecError < Puppet::Error
+    include ExternalFileError
+  end
 end
