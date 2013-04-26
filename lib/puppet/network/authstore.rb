@@ -61,7 +61,7 @@ module Puppet
     def deny_ip(pattern)
       store(:deny_ip, pattern)
     end
-
+    
     # Is global allow enabled?
     def globalallow?
       @globalallow
@@ -162,10 +162,25 @@ module Puppet
           pattern.include?(IPAddr.new(ip))
         elsif File.executable? self.pattern
           begin
-            system "#{@pattern} #{name}"
-            $?.exitstatus == 0
+            prog = File.basename @pattern
+            output = Puppet::Util::Execution.execute("#{@pattern} #{name}")
+            if $?.exitstatus == 0
+              if output
+                Puppet.notice "autosign(#{prog})=PASS(#{name}): #{output}"
+              else
+                Puppet.notice "autosign(#{prog})=PASS(#{name})"
+              end
+              return true
+            else 
+              if output
+                Puppet.notice "autosign(#{prog})=FAIL(#{name}): #{output}"
+              else
+                Puppet.notice "autosign(#{prog})=FAIL(#{name})"
+              end
+              return false
+            end
           rescue Exception => e
-            raise PuppetError::ExecError, "Autosign hook error trying to execute #{@pattern} #{name}: #{e}"
+            raise PuppetError::ExecError, "Autosign hook error while executing #{@pattern} #{name}: #{e}"
           end
         else
           matchname?(name)
@@ -280,8 +295,8 @@ module Puppet
           [:opaque,:exact,nil,[value]]
         when /^\/.*\/$/                                           # a regular expression
           [:regex,:inexact,nil,value]
-        when /^\/.+(?:[^\/])/                                     # path to executable
-          [:exact, nil, value]
+        when /^(\/.+[^\/])\s*$/                                    # path to executable
+          [:exec, :exact, nil, value]
         else
           raise AuthStoreError, "Invalid pattern #{value}"
         end
