@@ -3,6 +3,7 @@
 
 require 'ipaddr'
 require 'puppet/util/logging'
+require 'puppet/util/execution'
 
 module Puppet
   class AuthStoreError < Puppet::Error; end
@@ -160,22 +161,22 @@ module Puppet
       def match?(name, ip)
         if ip?
           pattern.include?(IPAddr.new(ip))
-        elsif File.executable? self.pattern
+        elsif @pattern.is_a? String and File.executable? @pattern
           begin
             prog = File.basename @pattern
             output = Puppet::Util::Execution.execute("#{@pattern} #{name}")
             if $?.exitstatus == 0
-              if output
-                Puppet.notice "autosign(#{prog})=PASS(#{name}): #{output}"
+              if output.length > 0
+                Puppet.info "autosign(#{prog})=PASS(#{name}): #{output}"
               else
-                Puppet.notice "autosign(#{prog})=PASS(#{name})"
+                Puppet.info "autosign(#{prog})=PASS(#{name})"
               end
               return true
             else 
               if output
-                Puppet.notice "autosign(#{prog})=FAIL(#{name}): #{output}"
+                Puppet.info "autosign(#{prog})=FAIL(#{name}): #{output}"
               else
-                Puppet.notice "autosign(#{prog})=FAIL(#{name})"
+                Puppet.info "autosign(#{prog})=FAIL(#{name})"
               end
               return false
             end
