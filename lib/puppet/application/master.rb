@@ -6,6 +6,13 @@ class Puppet::Application::Master < Puppet::Application
 
   option("--debug", "-d")
   option("--verbose", "-v")
+  
+  # Instruct the master to announce its availablity. 
+  option("--markup")
+  option("--markdown [MESSAGE]") do |message|
+    options[:markdown] = true
+    options[:markdown_message] = message
+  end
 
   # internal option, only to be used by ext/rack/config.ru
   option("--rack")
